@@ -1,0 +1,19 @@
+- Deploy target is Cloudflare Workers (`wrangler.jsonc`, `@cloudflare/vite-plugin`); set secrets with `wrangler secret put`.
+- Only `@pua.edu.eg` emails may sign in (checked in `_authenticated` gate, cover page, auth middleware, and DB trigger `enforce_pua_email`).
+- AI calls live in server-only `src/lib/*.server.ts` (shared OpenRouter client in `ai.server.ts`) and are exposed via `createServerFn` in `*.functions.ts`; keeps the AI key and prompts off the browser. Uses `OPENROUTER_API_KEY` (optional `OPENROUTER_MODEL`, default `openrouter/free`).
+- Subjects, lessons, materials, quizzes, events and announcements live in Supabase tables managed from the admin page; src/lib/data.ts holds only shared types; quiz grading lives in src/lib/quiz.ts with tests.
+- Quiz integrity: students read quizzes only via `student_quizzes()` (answers/explanations stripped); they cannot SELECT full `quizzes` rows or INSERT into `quiz_attempts`. Grading and attempt inserts go through `submitQuizAttempt` (service role) in `quiz.functions.ts`.
+- Abuse guards: in-isolate rate limits (`src/lib/rate-limit.ts`) on AI study plans, file insights, and admin push blasts; `material_opens` is unique per (user, event, material).
+- Admin panel is gated in `beforeLoad` via `is_admin()` (redirect to dashboard); RLS remains the write authority.
+- Roles: owner (single row `role='owner'` in `admin_emails`, seeded as `202604193@pua.edu.eg`), admin (other `admin_emails` rows), student (everyone else). `is_admin()` covers owner+admin; only `is_owner()` may add/remove admins or call `transfer_ownership`. Never trust client-side flags for admin/owner.
+- Lesson files are stored in the private `materials` bucket and read through short-lived signed URLs.
+- Offline PWA uses public/sw.js (runtime caching), registered only from src/lib/offline.ts, which refuses dev/iframe hosts; OAuth callback navigations are never cached.
+- All app pages live under src/routes/_authenticated/ (ssr:false gate, redirects to the public cover page at /); AppShell wraps only that layout.
+- Theme: `dark` class on <html> set by an inline pre-paint script (src/lib/theme.tsx); dark unless the user picked light.
+- Student progress (lesson completions, quiz attempts) is stored per user with owner-only RLS; streaks are derived from activity dates in src/lib/progress.ts, never stored.
+- UI text is translated with `useI18n().t("English text")` / `translate()` from src/lib/i18n.tsx; Arabic strings live in src/lib/i18n-ar.ts keyed by the English text, and a test fails if a translated string has no Arabic entry. Language is stored in localStorage and applied to <html lang/dir> by a pre-paint script; use logical Tailwind classes (ms/me/ps/pe/start/end, text-start) so RTL works.
+- Push notifications use standard Web Push with a dedicated worker (public/push-sw.js, scope /push/) separate from the offline /sw.js; VAPID keys are derived server-side from the VAPID_SEED secret in src/lib/push.server.ts, devices are stored in push_subscriptions (written only via the authenticated savePushSubscription server fn), and only admins can trigger pushAnnouncement.
+- Schedule alerts are announcements linked to an event (announcements.event_id, cascade delete); their text is built from the event at display/send time so it follows each student's language and time zone.
+- Lesson files attach to schedule events through the event_materials link table (admin-only writes); students open them from the schedule via the same signed URLs as lesson pages.
+- File-open stats: students log opens into material_opens (insert only for files attached to that event); admins read them plus the student list from the admin_students() security-definer function, which refuses non-admins.
+- AI file-engagement insights: admin-only askFileInsights server fn builds the stats dataset server-side (student names only, no emails) and the model answers strictly from it.

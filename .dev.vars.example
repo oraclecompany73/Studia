@@ -1,0 +1,9 @@
+# Copied to .dev.vars for local `vite dev` / `wrangler` (gitignored).
+# Mirror the same secrets you put on Cloudflare with `wrangler secret put`.
+
+SUPABASE_URL=https://your_project_id.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
+OPENROUTER_API_KEY=sk-or-v1-...
+OPENROUTER_MODEL=openrouter/free
+VAPID_SEED=

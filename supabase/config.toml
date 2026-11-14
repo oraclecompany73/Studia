@@ -1,0 +1,3 @@
+# Local Supabase CLI config. `project_id` is only the local stack name;
+# `supabase link --project-ref <your-ref>` binds this checkout to your own project.
+project_id = "studia"

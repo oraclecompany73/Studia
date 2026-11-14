@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "studia",
+  "compatibility_date": "2026-10-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/react-start/server-entry",
+  "observability": {
+    "enabled": true,
+  },
+  // Your own Supabase project. Both values are client-safe (they ship in the
+  // browser bundle); keep .env in sync for local builds.
+  // Secrets (never commit): wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+  //                         wrangler secret put OPENROUTER_API_KEY
+  //                         wrangler secret put VAPID_SEED
+  "vars": {
+    "SUPABASE_URL": "https://eombjtzxrtvrjsgqmoed.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_Nllu-eaZQ14JccHwquA8GQ_zxcLUj4Y",
+  },
+}
