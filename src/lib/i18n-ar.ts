@@ -545,4 +545,48 @@ export const ar: Record<string, string> = {
   "Couldn't read the lesson PDF. Check the file and try again.":
     "تعذر قراءة ملف PDF. تحقق من الملف وحاول مرة أخرى.",
   "Invalid material.": "ملف غير صالح.",
+
+  // Admin shell & overview
+  "Admin sections": "أقسام لوحة الأدمن",
+  Overview: "نظرة عامة",
+  "Due soon": "قادمة قريبًا",
+  "Quizzes, exams and deadlines ahead": "كويزات وامتحانات ومواعيد تسليم قادمة",
+  "Quick actions": "إجراءات سريعة",
+  "View all": "عرض الكل",
+  "Latest announcements": "أحدث الإعلانات",
+  "Add your first subject": "أضف أول مادة",
+  "Subjects are the home for lessons, files and quizzes.":
+    "المواد هي موطن الدروس والملفات والكويزات.",
+
+  // Admin: search & empty states
+  "Clear search": "مسح البحث",
+  "Search subjects": "ابحث في المواد",
+  "No subjects match your search.": "لا توجد مواد مطابقة للبحث.",
+  "Pick a subject": "اختر مادة",
+  "Select a subject from the list to manage its lessons and files.":
+    "اختر مادة من القائمة لإدارة دروسها وملفاتها.",
+  "Search quizzes": "ابحث في الكويزات",
+  "No quizzes match your search.": "لا توجد كويزات مطابقة للبحث.",
+  "Search schedule": "ابحث في الجدول",
+  "No schedule items match your search.": "لا توجد عناصر مطابقة للبحث.",
+  "Search announcements": "ابحث في الإعلانات",
+  "No announcements match your search.": "لا توجد إعلانات مطابقة للبحث.",
+  "Everyone who signed up with a university email.": "كل من سجّل ببريد جامعي.",
+
+  // Admin: counts
+  "{n} quizzes total": "{n} كويز إجماليًا",
+  "{n} announcements total": "{n} إعلان إجماليًا",
+  "{nUpcoming} upcoming · {nPast} past": "{nUpcoming} قادمة · {nPast} سابقة",
+
+  // Admin: quizzes empty state
+  "Quizzes attach to a subject and its lesson PDFs.": "الكويزات ترتبط بمادة وملفات دروسها.",
+  "Upload a lesson PDF first": "ارفع ملف درس PDF أولًا",
+  "Create your first quiz from a lesson PDF — AI can draft the questions.":
+    "أنشئ أول كويز من ملف درس — يمكن للذكاء الاصطناعي صياغة الأسئلة.",
+
+  // Admin: file stats
+  "Total opens": "إجمالي الفتحات",
+  "Students reached": "طلاب وصلهم الملف",
+  "Opened at least one lesson file": "فتح ملف درس واحدًا على الأقل",
+  "Files tracked": "ملفات متتبَّعة",
 };

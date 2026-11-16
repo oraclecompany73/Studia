@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { FileUp, Paperclip, Pencil, Plus, Trash2, X } from "lucide-react";
+import { BookOpen, FileUp, Paperclip, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,49 +8,110 @@ import { subjectIcons, type Solution, type SubjectIconName } from "@/lib/data";
 import { SubjectIcon } from "@/components/app/SubjectIcon";
 import { cn } from "@/lib/utils";
 import { translate as tr } from "@/lib/i18n";
-import { btn, btnDanger, btnGhost, Card, confirmDelete, field, Label, useSave } from "./shared";
+import {
+  Badge,
+  btn,
+  btnDanger,
+  btnGhost,
+  confirmDelete,
+  EmptyState,
+  field,
+  Label,
+  SearchField,
+  SectionCard,
+  Spinner,
+  useSave,
+} from "./shared";
 
 const KEYS = [subjectsQuery.queryKey as unknown as string[]];
 
 export function SubjectsAdmin() {
   const { data: subjects } = useSuspenseQuery(subjectsQuery);
   const [selected, setSelected] = useState<string | null>(subjects[0]?.id ?? null);
+  const [q, setQ] = useState("");
+  const [creating, setCreating] = useState(false);
   const subject = subjects.find((s) => s.id === selected) ?? null;
+  const needle = q.trim().toLowerCase();
+  const filtered = subjects.filter((s) =>
+    `${s.name} ${s.instructor}`.toLowerCase().includes(needle),
+  );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+    <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
       <div className="space-y-4">
-        <SubjectForm onSaved={(id) => setSelected(id)} />
-        <Card title="Subjects">
-          {subjects.length === 0 && (
-            <p className="text-sm text-muted-foreground">{tr("No subjects yet.")}</p>
+        <SectionCard title="Subjects" bodyClassName="space-y-3">
+          {subjects.length > 0 && (
+            <SearchField value={q} onChange={setQ} placeholder="Search subjects" />
           )}
-          <div className="space-y-1.5">
-            {subjects.map((s) => (
+          {subjects.length === 0 ? (
+            <EmptyState
+              icon={BookOpen}
+              title="No subjects yet."
+              hint="Add a subject to start adding lessons and files."
+              action={
+                <button className={btnGhost} onClick={() => setCreating(true)}>
+                  <Plus className="h-4 w-4" />
+                  {tr("New subject")}
+                </button>
+              }
+            />
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                {filtered.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      setSelected(s.id);
+                      setCreating(false);
+                    }}
+                    aria-current={s.id === selected && !creating ? "true" : undefined}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-start text-sm font-medium transition-colors",
+                      s.id === selected && !creating
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-secondary",
+                    )}
+                  >
+                    <SubjectIcon icon={s.icon} className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 truncate">{s.name}</span>
+                    <span className="text-xs opacity-70">{s.lessons.length}</span>
+                  </button>
+                ))}
+              </div>
+              {filtered.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {tr("No subjects match your search.")}
+                </p>
+              )}
               <button
-                key={s.id}
-                onClick={() => setSelected(s.id)}
-                className={cn(
-                  "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-start text-sm font-medium",
-                  s.id === selected ? "bg-primary text-primary-foreground" : "hover:bg-secondary",
-                )}
+                className={cn(btnGhost, "w-full justify-center border border-dashed")}
+                onClick={() => setCreating(true)}
               >
-                <SubjectIcon icon={s.icon} className="h-4 w-4" />
-                <span className="flex-1 truncate">{s.name}</span>
-                <span className="text-xs opacity-70">{s.lessons.length}</span>
+                <Plus className="h-4 w-4" />
+                {tr("New subject")}
               </button>
-            ))}
-          </div>
-        </Card>
+            </>
+          )}
+        </SectionCard>
       </div>
-      {subject ? (
+
+      {creating ? (
+        <SubjectForm
+          onSaved={(id) => {
+            setCreating(false);
+            setSelected(id);
+          }}
+          onCancel={() => setCreating(false)}
+        />
+      ) : subject ? (
         <SubjectDetail key={subject.id} subject={subject} onDeleted={() => setSelected(null)} />
-      ) : (
-        <Card>
-          <p className="text-sm text-muted-foreground">
-            {tr("Add a subject to start adding lessons and files.")}
-          </p>
-        </Card>
+      ) : subjects.length === 0 ? null : (
+        <EmptyState
+          icon={BookOpen}
+          title="Pick a subject"
+          hint="Select a subject from the list to manage its lessons and files."
+        />
       )}
     </div>
   );
@@ -108,7 +169,7 @@ function SubjectForm({
   }
 
   return (
-    <Card title={initial ? "Edit subject" : "New subject"}>
+    <SectionCard title={initial ? "Edit subject" : "New subject"}>
       <form onSubmit={submit} className="space-y-3">
         <label className="block">
           <Label>Name</Label>
@@ -146,9 +207,10 @@ function SubjectForm({
                 type="button"
                 key={i}
                 aria-label={i}
+                aria-pressed={icon === i}
                 onClick={() => setIcon(i)}
                 className={cn(
-                  "grid h-9 w-9 place-items-center rounded-lg border",
+                  "grid h-9 w-9 place-items-center rounded-lg border transition-colors",
                   icon === i
                     ? "border-primary bg-primary text-primary-foreground"
                     : "hover:bg-secondary",
@@ -161,6 +223,7 @@ function SubjectForm({
         </div>
         <div className="flex gap-2">
           <button className={btn} disabled={busy}>
+            {busy && <Spinner />}
             {initial ? (
               tr("Save")
             ) : (
@@ -177,7 +240,7 @@ function SubjectForm({
           )}
         </div>
       </form>
-    </Card>
+    </SectionCard>
   );
 }
 
@@ -196,14 +259,14 @@ function SubjectDetail({ subject, onDeleted }: { subject: Subject; onDeleted: ()
           onCancel={() => setEditing(false)}
         />
       ) : (
-        <Card>
+        <SectionCard bodyClassName="p-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary text-primary-foreground">
               <SubjectIcon icon={subject.icon} className="h-5 w-5" />
             </div>
-            <div className="flex-1">
-              <p className="text-lg font-bold">{subject.name}</p>
-              <p className="text-sm text-muted-foreground">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-lg font-bold">{subject.name}</p>
+              <p className="truncate text-sm text-muted-foreground">
                 {subject.instructor || tr("No teacher set")} ·{" "}
                 {tr(subject.lessons.length === 1 ? "{n} lesson" : "{n} lessons", {
                   n: subject.lessons.length,
@@ -239,30 +302,41 @@ function SubjectDetail({ subject, onDeleted }: { subject: Subject; onDeleted: ()
               {tr("Delete")}
             </button>
           </div>
-        </Card>
+        </SectionCard>
       )}
 
-      <Card title="Lessons">
-        <div className="mb-4 flex flex-wrap gap-2">
+      <SectionCard title="Lessons" bodyClassName="space-y-4">
+        <div className="flex flex-wrap gap-2">
           {subject.lessons.map((l) => (
             <button
               key={l.id}
               onClick={() => setLessonId(l.id)}
               className={cn(
-                "rounded-xl px-3 py-1.5 text-sm font-medium",
+                "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors",
                 l.id === lessonId
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary hover:bg-secondary/80",
               )}
             >
-              {l.title}
+              <span className="max-w-52 truncate">{l.title}</span>
+              {l.materials.length > 0 && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-0.5 text-[11px]",
+                    l.id === lessonId ? "opacity-80" : "text-muted-foreground",
+                  )}
+                >
+                  <Paperclip className="h-3 w-3" aria-hidden />
+                  {l.materials.length}
+                </span>
+              )}
             </button>
           ))}
           <button
             onClick={() => setLessonId("new")}
             className={cn(
-              "inline-flex items-center gap-1 rounded-xl border border-dashed px-3 py-1.5 text-sm font-medium",
-              lessonId === "new" && "border-primary text-primary",
+              "inline-flex items-center gap-1 rounded-xl border border-dashed px-3 py-1.5 text-sm font-medium transition-colors",
+              lessonId === "new" ? "border-primary text-primary" : "hover:bg-secondary",
             )}
           >
             <Plus className="h-4 w-4" />
@@ -290,7 +364,7 @@ function SubjectDetail({ subject, onDeleted }: { subject: Subject; onDeleted: ()
             <MaterialsEditor lesson={lesson} />
           </div>
         ) : null}
-      </Card>
+      </SectionCard>
     </div>
   );
 }
@@ -435,8 +509,9 @@ function LessonForm({
         </div>
       </div>
 
-      <div className="flex gap-2 pt-2">
+      <div className="flex flex-wrap gap-2 pt-2">
         <button className={btn} disabled={busy}>
+          {busy && <Spinner />}
           {initial ? tr("Save lesson") : tr("Add lesson")}
         </button>
         {initial && (
@@ -518,13 +593,23 @@ function MaterialsEditor({ lesson }: { lesson: Lesson }) {
 
   return (
     <div className="border-t pt-5">
-      <p className="mb-3 font-semibold">{tr("Files for this lesson (PDFs, slides, videos)")}</p>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="font-semibold">{tr("Files for this lesson (PDFs, slides, videos)")}</p>
+        <Badge tone={lesson.materials.length ? "primary" : "neutral"}>
+          {tr(lesson.materials.length === 1 ? "{n} file" : "{n} files", {
+            n: lesson.materials.length,
+          })}
+        </Badge>
+      </div>
       <ul className="mb-4 space-y-2">
         {lesson.materials.length === 0 && (
           <li className="text-sm text-muted-foreground">{tr("No files yet.")}</li>
         )}
         {lesson.materials.map((m) => (
-          <li key={m.id} className="flex items-center gap-3 rounded-xl border px-3 py-2 text-sm">
+          <li
+            key={m.id}
+            className="flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors hover:bg-secondary/40"
+          >
             <span className="flex-1 truncate font-medium">{m.title}</span>
             <span className="text-xs text-muted-foreground">{formatSize(m.size_bytes)}</span>
             <button
@@ -566,7 +651,7 @@ function MaterialsEditor({ lesson }: { lesson: Lesson }) {
           />
         </label>
         <button className={btn} disabled={busy}>
-          <FileUp className="h-4 w-4" />
+          {busy ? <Spinner /> : <FileUp className="h-4 w-4" />}
           {busy ? tr("Uploading…") : tr("Upload")}
         </button>
       </form>

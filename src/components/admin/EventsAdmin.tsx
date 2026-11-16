@@ -7,10 +7,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { eventsQuery, subjectsQuery } from "@/lib/content";
 import { dueTypes, eventTypes, type EventType } from "@/lib/data";
 import { pushAnnouncement } from "@/lib/push.functions";
-import { btn, btnDanger, Card, confirmDelete, field, Label, useSave } from "./shared";
+import {
+  Badge,
+  btn,
+  btnDanger,
+  confirmDelete,
+  field,
+  Label,
+  SearchField,
+  SectionCard,
+  Spinner,
+  useSave,
+} from "./shared";
 import { translate as tr, useI18n } from "@/lib/i18n";
 
 const KEYS = [["events"]];
+
+const typeTone: Record<EventType, "primary" | "success" | "warning" | "danger" | "neutral"> = {
+  class: "primary",
+  lecture: "neutral",
+  study: "success",
+  deadline: "danger",
+  quiz: "warning",
+  exam: "danger",
+  assignment: "primary",
+};
 
 export function EventsAdmin() {
   const { data: events } = useSuspenseQuery(eventsQuery);
@@ -30,6 +51,7 @@ export function EventsAdmin() {
   const [notify, setNotify] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState("");
 
   const fileGroups = subjects
     .filter((s) => !subjectId || s.id === subjectId)
@@ -130,10 +152,16 @@ export function EventsAdmin() {
     (e) => new Date(e.ends_at ?? e.starts_at).getTime() >= Date.now() - 86400000,
   );
   const past = events.length - upcoming.length;
+  const needle = q.trim().toLowerCase();
+  const visible = upcoming.filter((e) =>
+    `${e.title} ${e.location} ${subjects.find((s) => s.id === e.subject_id)?.name ?? ""}`
+      .toLowerCase()
+      .includes(needle),
+  );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
-      <Card title="Add to schedule">
+    <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+      <SectionCard title="Add to schedule">
         <form onSubmit={submit} className="space-y-3">
           <label className="block">
             <Label>Title</Label>
@@ -277,24 +305,53 @@ export function EventsAdmin() {
             </label>
           )}
           <button className={btn} disabled={busy}>
+            {busy && <Spinner />}
             <Plus className="h-4 w-4" />
             {busy ? tr("Saving…") : tr("Add")}
           </button>
         </form>
-      </Card>
-      <Card title="Upcoming">
+      </SectionCard>
+      <SectionCard
+        title="Upcoming"
+        hint={
+          upcoming.length || past
+            ? tr("{nUpcoming} upcoming · {nPast} past", {
+                nUpcoming: upcoming.length,
+                nPast: past,
+              })
+            : undefined
+        }
+        actions={
+          upcoming.length > 0 ? (
+            <SearchField
+              value={q}
+              onChange={setQ}
+              placeholder="Search schedule"
+              className="w-full sm:w-56"
+            />
+          ) : undefined
+        }
+        bodyClassName="space-y-3"
+      >
         {upcoming.length === 0 && (
           <p className="text-sm text-muted-foreground">{tr("Nothing scheduled.")}</p>
         )}
+        {upcoming.length > 0 && visible.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            {tr("No schedule items match your search.")}
+          </p>
+        )}
         <ul className="divide-y">
-          {upcoming.map((e) => {
+          {visible.map((e) => {
             const d = new Date(e.starts_at);
             return (
               <li key={e.id} className="flex items-center gap-3 py-3">
-                <div className="flex-1">
-                  <p className="font-medium">{e.title}</p>
-                  <p className="text-xs capitalize text-muted-foreground">
-                    {tr(e.type)} ·{" "}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{e.title}</p>
+                    <Badge tone={typeTone[e.type] ?? "neutral"}>{tr(e.type)}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
                     {d.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" })}
                     {e.subject_id &&
                       ` · ${subjects.find((s) => s.id === e.subject_id)?.name ?? ""}`}
@@ -322,7 +379,7 @@ export function EventsAdmin() {
           })}
         </ul>
         {past > 0 && (
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {tr(
               past === 1
                 ? "{n} past item still shows in students' calendars."
@@ -331,7 +388,7 @@ export function EventsAdmin() {
             )}
           </p>
         )}
-      </Card>
+      </SectionCard>
     </div>
   );
 }

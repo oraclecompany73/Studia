@@ -8,7 +8,18 @@ import { announcementsQuery } from "@/lib/content";
 import { announcementKinds, type AnnouncementKind } from "@/lib/data";
 import { noticeView, timeAgo } from "@/lib/notifications";
 import { pushAnnouncement } from "@/lib/push.functions";
-import { btn, btnDanger, Card, confirmDelete, field, Label, useSave } from "./shared";
+import {
+  Badge,
+  btn,
+  btnDanger,
+  confirmDelete,
+  field,
+  Label,
+  SearchField,
+  SectionCard,
+  Spinner,
+  useSave,
+} from "./shared";
 import { translate as tr, useI18n } from "@/lib/i18n";
 
 const KEYS = [["announcements"]];
@@ -17,6 +28,13 @@ const kindLabel: Record<AnnouncementKind, string> = {
   quiz: "Quiz",
   material: "New material",
   schedule: "Schedule change",
+};
+
+const kindTone: Record<AnnouncementKind, "primary" | "success" | "warning" | "neutral"> = {
+  news: "primary",
+  quiz: "warning",
+  material: "success",
+  schedule: "neutral",
 };
 
 export function AnnouncementsAdmin() {
@@ -28,6 +46,9 @@ export function AnnouncementsAdmin() {
   const [body, setBody] = useState("");
   const [kind, setKind] = useState<AnnouncementKind>("news");
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState("");
+  const needle = q.trim().toLowerCase();
+  const list = data.filter((n) => `${n.title} ${n.body}`.toLowerCase().includes(needle));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -67,8 +88,8 @@ export function AnnouncementsAdmin() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
-      <Card title="New announcement">
+    <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+      <SectionCard title="New announcement">
         <form onSubmit={submit} className="space-y-3">
           <label className="block">
             <Label>Type</Label>
@@ -104,24 +125,47 @@ export function AnnouncementsAdmin() {
             />
           </label>
           <button className={btn} disabled={busy}>
+            {busy && <Spinner />}
             <Send className="h-4 w-4" />
             {tr("Publish")}
           </button>
         </form>
-      </Card>
-      <Card title="Published">
+      </SectionCard>
+      <SectionCard
+        title="Published"
+        hint={data.length ? tr("{n} announcements total", { n: data.length }) : undefined}
+        actions={
+          data.length > 0 ? (
+            <SearchField
+              value={q}
+              onChange={setQ}
+              placeholder="Search announcements"
+              className="w-full sm:w-56"
+            />
+          ) : undefined
+        }
+        bodyClassName="space-y-3"
+      >
         {data.length === 0 && (
           <p className="text-sm text-muted-foreground">{tr("No announcements yet.")}</p>
         )}
+        {data.length > 0 && list.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            {tr("No announcements match your search.")}
+          </p>
+        )}
         <ul className="divide-y">
-          {data.map((n) => (
+          {list.map((n) => (
             <li key={n.id} className="flex items-start gap-3 py-3">
-              <div className="flex-1">
-                <p className="font-medium">{n.title}</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium">{n.title}</p>
+                  <Badge tone={kindTone[n.kind] ?? "neutral"}>
+                    {tr(kindLabel[n.kind] ?? n.kind)}
+                  </Badge>
+                </div>
                 <p className="whitespace-pre-line text-sm text-muted-foreground">{n.body}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {tr(kindLabel[n.kind] ?? n.kind)} · {timeAgo(n.created_at)}
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">{timeAgo(n.created_at)}</p>
               </div>
               <button
                 className={btnDanger}
@@ -140,7 +184,7 @@ export function AnnouncementsAdmin() {
             </li>
           ))}
         </ul>
-      </Card>
+      </SectionCard>
     </div>
   );
 }

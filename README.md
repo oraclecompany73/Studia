@@ -40,17 +40,17 @@ The numbered files in `drizzle/migrations/` are the same statements in order —
 
 Copy `.env.example` to `.env` and fill it in (see the table below). Only `@pua.edu.eg` accounts may sign in.
 
-| Variable | Where | Purpose |
-| --- | --- | --- |
-| `SUPABASE_URL` | `.env` + `wrangler.jsonc` vars | Your project URL (server) |
-| `SUPABASE_PUBLISHABLE_KEY` | `.env` + `wrangler.jsonc` vars | Publishable key (server) |
-| `VITE_SUPABASE_URL` | `.env` | Same URL, baked into the client bundle |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | `.env` | Same publishable key, for the browser |
-| `SUPABASE_SERVICE_ROLE_KEY` | secret only | Server-side admin client (grading, push, stats) |
-| `OPENROUTER_API_KEY` | secret, optional | AI study plans + file insights |
-| `OPENROUTER_MODEL` | env, optional | Defaults to `openrouter/free` |
-| `VAPID_SEED` | secret, optional | Web Push (VAPID keys are derived from it) |
-| `DATABASE_URL` | `.env`, optional | Only for `drizzle-kit` migrations |
+| Variable                        | Where                          | Purpose                                         |
+| ------------------------------- | ------------------------------ | ----------------------------------------------- |
+| `SUPABASE_URL`                  | `.env` + `wrangler.jsonc` vars | Your project URL (server)                       |
+| `SUPABASE_PUBLISHABLE_KEY`      | `.env` + `wrangler.jsonc` vars | Publishable key (server)                        |
+| `VITE_SUPABASE_URL`             | `.env`                         | Same URL, baked into the client bundle          |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | `.env`                         | Same publishable key, for the browser           |
+| `SUPABASE_SERVICE_ROLE_KEY`     | secret only                    | Server-side admin client (grading, push, stats) |
+| `OPENROUTER_API_KEY`            | secret, optional               | AI study plans + file insights                  |
+| `OPENROUTER_MODEL`              | env, optional                  | Defaults to `openrouter/free`                   |
+| `VAPID_SEED`                    | secret, optional               | Web Push (VAPID keys are derived from it)       |
+| `DATABASE_URL`                  | `.env`, optional               | Only for `drizzle-kit` migrations               |
 
 `wrangler.jsonc` `vars` must contain the same `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` you use locally.
 

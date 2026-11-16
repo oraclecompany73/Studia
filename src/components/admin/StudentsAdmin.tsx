@@ -1,12 +1,11 @@
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Activity, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { translate as tr, useI18n } from "@/lib/i18n";
-import { Card } from "./shared";
+import { Badge, SearchField, SectionCard, StatCard } from "./shared";
 
-type Account = {
+export type Account = {
   user_id: string;
   email: string;
   full_name: string;
@@ -17,7 +16,7 @@ type Account = {
   email_confirmed_at: string | null;
 };
 
-const accountsQuery = queryOptions({
+export const accountsQuery = queryOptions({
   queryKey: ["student-accounts"],
   queryFn: async () => {
     const { data, error } = await supabase.rpc("admin_student_accounts");
@@ -39,77 +38,74 @@ export function StudentsAdmin() {
     (a) => a.last_sign_in_at && new Date(a.last_sign_in_at).getTime() > week,
   ).length;
   const newWeek = data.filter((a) => new Date(a.created_at).getTime() > week).length;
-  const list = data.filter((a) =>
-    `${a.full_name} ${a.email}`.toLowerCase().includes(q.toLowerCase()),
-  );
+  const needle = q.trim().toLowerCase();
+  const list = data.filter((a) => `${a.full_name} ${a.email}`.toLowerCase().includes(needle));
 
   return (
-    <Card title="Student accounts">
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        {[
-          [t("Total students"), data.length],
-          [t("Signed in this week"), activeWeek],
-          [t("New this week"), newWeek],
-        ].map(([l, v]) => (
-          <div key={String(l)} className="rounded-xl border p-3">
-            <p className="text-xs text-muted-foreground">{l}</p>
-            <p className="text-2xl font-bold">{v}</p>
-          </div>
-        ))}
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard label="Total students" value={data.length} icon={Users} />
+        <StatCard label="Signed in this week" value={activeWeek} icon={Activity} tone="green" />
+        <StatCard label="New this week" value={newWeek} icon={UserPlus} tone="blue" />
       </div>
-      <div className="relative mb-4">
-        <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder={t("Search by name or email")}
-          className="ps-9"
-        />
-      </div>
-      {list.length === 0 && (
-        <p className="text-sm text-muted-foreground">{t("No students found.")}</p>
-      )}
-      <div className="space-y-2">
-        {list.map((a) => (
-          <div key={a.user_id} className="flex flex-wrap items-center gap-3 rounded-xl border p-3">
-            {a.avatar_url ? (
-              <img
-                src={a.avatar_url}
-                alt=""
-                className="h-10 w-10 rounded-full"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted font-semibold">
-                {(a.full_name || a.email || "?")[0]?.toUpperCase()}
+
+      <SectionCard
+        title="Student accounts"
+        hint="Everyone who signed up with a university email."
+        bodyClassName="space-y-4"
+      >
+        <SearchField value={q} onChange={setQ} placeholder="Search by name or email" />
+        {list.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            {needle ? tr("No students found.") : tr("No students yet.")}
+          </p>
+        )}
+        <div className="space-y-2">
+          {list.map((a) => (
+            <div
+              key={a.user_id}
+              className="flex flex-wrap items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-secondary/40"
+            >
+              {a.avatar_url ? (
+                <img
+                  src={a.avatar_url}
+                  alt=""
+                  className="h-10 w-10 rounded-full"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted font-semibold">
+                  {(a.full_name || a.email || "?")[0]?.toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold">{a.full_name || a.email}</p>
+                <p className="truncate text-xs text-muted-foreground" dir="ltr">
+                  {a.email}
+                </p>
               </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold">{a.full_name || a.email}</p>
-              <p className="truncate text-xs text-muted-foreground" dir="ltr">
-                {a.email}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone={a.provider === "google" ? "primary" : "neutral"}>
+                  {a.provider === "google"
+                    ? "Google"
+                    : tr(a.provider === "email" ? "Email" : a.provider)}
+                </Badge>
+                {!a.email_confirmed_at && <Badge tone="warning">{tr("Unconfirmed")}</Badge>}
+              </div>
+              <div className="grid w-full gap-x-6 gap-y-1 text-xs sm:w-auto sm:grid-cols-2 lg:grid-cols-3">
+                <span>
+                  <span className="text-muted-foreground">{t("Signed up")}: </span>
+                  {fmt(a.created_at)}
+                </span>
+                <span>
+                  <span className="text-muted-foreground">{t("Last sign-in")}: </span>
+                  {fmt(a.last_sign_in_at)}
+                </span>
+              </div>
             </div>
-            <div className="grid gap-x-6 gap-y-1 text-xs sm:grid-cols-3">
-              <span>
-                <span className="text-muted-foreground">{t("Signed up")}: </span>
-                {fmt(a.created_at)}
-              </span>
-              <span>
-                <span className="text-muted-foreground">{t("Last sign-in")}: </span>
-                {fmt(a.last_sign_in_at)}
-              </span>
-              <span>
-                <span className="text-muted-foreground">{t("Sign-in method")}: </span>
-                {a.provider === "google"
-                  ? "Google"
-                  : tr(a.provider === "email" ? "Email" : a.provider)}
-                {!a.email_confirmed_at && ` · ${t("Unconfirmed")}`}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Card>
+          ))}
+        </div>
+      </SectionCard>
+    </div>
   );
 }

@@ -1,15 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Navigate, redirect } from "@tanstack/react-router";
-import { Suspense } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { isAdminQuery } from "@/lib/content";
+import { Suspense, useState, type ReactNode } from "react";
+import { AdminShell, SectionSkeleton, type AdminSectionId } from "@/components/admin/AdminShell";
+import { Overview } from "@/components/admin/Overview";
 import { SubjectsAdmin } from "@/components/admin/SubjectsAdmin";
 import { QuizzesAdmin } from "@/components/admin/QuizzesAdmin";
 import { EventsAdmin } from "@/components/admin/EventsAdmin";
-import { AnnouncementsAdmin } from "@/components/admin/AnnouncementsAdmin";
 import { FileStatsAdmin } from "@/components/admin/FileStatsAdmin";
 import { StudentsAdmin } from "@/components/admin/StudentsAdmin";
+import { AnnouncementsAdmin } from "@/components/admin/AnnouncementsAdmin";
 import { AdminsAdmin } from "@/components/admin/AdminsAdmin";
+import { isAdminQuery, isOwnerQuery } from "@/lib/content";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 
@@ -41,11 +42,23 @@ function AdminPage() {
   const { user } = Route.useRouteContext();
   // Defense in depth with beforeLoad; keeps UI reactive if role changes mid-session.
   const { data: isAdmin, isLoading } = useQuery(isAdminQuery);
+  const { data: isOwner } = useQuery(isOwnerQuery);
+  const [section, setSection] = useState<AdminSectionId>("overview");
 
   if (isLoading) return <div className="h-96 animate-pulse rounded-2xl bg-card" />;
   if (!isAdmin) return <Navigate to="/dashboard" />;
 
-  const loading = <div className="h-64 animate-pulse rounded-2xl bg-card" />;
+  const sections: Record<AdminSectionId, ReactNode> = {
+    overview: <Overview onNavigate={setSection} />,
+    subjects: <SubjectsAdmin />,
+    quizzes: <QuizzesAdmin />,
+    schedule: <EventsAdmin />,
+    files: <FileStatsAdmin />,
+    students: <StudentsAdmin />,
+    news: <AnnouncementsAdmin />,
+    admins: <AdminsAdmin myEmail={user.email ?? ""} />,
+  };
+
   return (
     <div className="space-y-6 fade-up">
       <div>
@@ -54,43 +67,14 @@ function AdminPage() {
           {t("Everything you add here appears for all students straight away.")}
         </p>
       </div>
-      <Tabs defaultValue="subjects">
-        <TabsList
-          className="flex h-auto flex-wrap justify-start bg-secondary"
-          aria-label={t("Admin panel")}
-        >
-          <TabsTrigger value="subjects">{t("Subjects & files")}</TabsTrigger>
-          <TabsTrigger value="quizzes">{t("Quizzes")}</TabsTrigger>
-          <TabsTrigger value="schedule">{t("Schedule")}</TabsTrigger>
-          <TabsTrigger value="stats">{t("File stats")}</TabsTrigger>
-          <TabsTrigger value="students">{t("Students")}</TabsTrigger>
-          <TabsTrigger value="news">{t("Announcements")}</TabsTrigger>
-          <TabsTrigger value="admins">{t("Admins")}</TabsTrigger>
-        </TabsList>
-        <Suspense fallback={loading}>
-          <TabsContent value="subjects" className="mt-6">
-            <SubjectsAdmin />
-          </TabsContent>
-          <TabsContent value="quizzes" className="mt-6">
-            <QuizzesAdmin />
-          </TabsContent>
-          <TabsContent value="schedule" className="mt-6">
-            <EventsAdmin />
-          </TabsContent>
-          <TabsContent value="stats" className="mt-6">
-            <FileStatsAdmin />
-          </TabsContent>
-          <TabsContent value="students" className="mt-6">
-            <StudentsAdmin />
-          </TabsContent>
-          <TabsContent value="news" className="mt-6">
-            <AnnouncementsAdmin />
-          </TabsContent>
-          <TabsContent value="admins" className="mt-6">
-            <AdminsAdmin myEmail={user.email ?? ""} />
-          </TabsContent>
-        </Suspense>
-      </Tabs>
+      <AdminShell
+        active={section}
+        onSelect={setSection}
+        role={isOwner ? "owner" : "admin"}
+        email={user.email ?? ""}
+      >
+        <Suspense fallback={<SectionSkeleton />}>{sections[section]}</Suspense>
+      </AdminShell>
     </div>
   );
 }

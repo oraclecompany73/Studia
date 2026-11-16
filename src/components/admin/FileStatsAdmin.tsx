@@ -1,11 +1,18 @@
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { CheckCircle2, ChevronDown, Circle, Paperclip } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  Circle,
+  MousePointerClick,
+  Paperclip,
+  Users,
+} from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { eventsQuery, type Material, type StudyEvent } from "@/lib/content";
 import { translate as tr, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { Card } from "./shared";
+import { Card, StatCard } from "./shared";
 import { FileInsightsAI } from "./FileInsightsAI";
 
 type Student = { user_id: string; email: string; full_name: string };
@@ -31,9 +38,23 @@ export function FileStatsAdmin() {
   const { data: events } = useSuspenseQuery(eventsQuery);
   const { data } = useSuspenseQuery(statsQuery);
   const withFiles = events.filter((e) => e.materials.length > 0).reverse();
+  const totalOpens = data.opens.length;
+  const reached = new Set(data.opens.map((o) => o.user_id)).size;
+  const filesTracked = new Set(data.opens.map((o) => o.material_id)).size;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard label="Total opens" value={totalOpens} icon={MousePointerClick} tone="blue" />
+        <StatCard
+          label="Students reached"
+          value={reached}
+          icon={Users}
+          tone="green"
+          hint="Opened at least one lesson file"
+        />
+        <StatCard label="Files tracked" value={filesTracked} icon={Paperclip} tone="amber" />
+      </div>
       <FileInsightsAI />
       <Card title="Who opened lesson files">
         <p className="-mt-2 mb-4 text-sm text-muted-foreground">

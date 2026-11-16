@@ -1,6 +1,6 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { ListChecks, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +15,21 @@ import type { Question, QuizDifficulty } from "@/lib/data";
 import { quizDifficulties, quizDifficultyLabel } from "@/lib/data";
 import { notifyNewQuiz } from "@/lib/push.functions";
 import { QuizAiImport } from "./QuizAiImport";
-import { btn, btnDanger, btnGhost, Card, confirmDelete, field, Label, useSave } from "./shared";
+import {
+  Badge,
+  btn,
+  btnDanger,
+  btnGhost,
+  Card,
+  confirmDelete,
+  EmptyState,
+  field,
+  Label,
+  SearchField,
+  SectionCard,
+  Spinner,
+  useSave,
+} from "./shared";
 import { translate as tr } from "@/lib/i18n";
 
 const KEYS = [["quizzes"], ["admin-quizzes"]];
@@ -54,12 +68,21 @@ function materialLabel(subjects: Subject[], materialId: string | null): string {
   return "";
 }
 
+const difficultyTone = { easy: "success", medium: "warning", hard: "danger" } as const;
+
 export function QuizzesAdmin() {
   const { data: quizzes } = useSuspenseQuery(adminQuizzesQuery);
   const { data: subjects } = useSuspenseQuery(subjectsQuery);
   const [editing, setEditing] = useState<AdminQuiz | "new" | null>(null);
+  const [q, setQ] = useState("");
   const save = useSave();
   const hasFiles = subjects.some((s) => s.lessons.some((l) => l.materials.length > 0));
+  const needle = q.trim().toLowerCase();
+  const filtered = quizzes.filter((z) =>
+    `${z.title} ${subjects.find((s) => s.id === z.subject_id)?.name ?? ""}`
+      .toLowerCase()
+      .includes(needle),
+  );
 
   if (editing)
     return (
@@ -70,44 +93,59 @@ export function QuizzesAdmin() {
     );
 
   return (
-    <Card>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-bold">{tr("Quizzes")}</h2>
+    <SectionCard
+      title="Quizzes"
+      hint={quizzes.length ? tr("{n} quizzes total", { n: quizzes.length }) : undefined}
+      actions={
         <button className={btn} disabled={!hasFiles} onClick={() => setEditing("new")}>
           <Plus className="h-4 w-4" />
           {tr("New quiz")}
         </button>
-      </div>
+      }
+      bodyClassName="space-y-4"
+    >
       {!subjects.length && (
-        <p className="text-sm text-muted-foreground">{tr("Add a subject first.")}</p>
+        <EmptyState
+          icon={ListChecks}
+          title="Add a subject first."
+          hint="Quizzes attach to a subject and its lesson PDFs."
+        />
       )}
       {subjects.length > 0 && !hasFiles && (
-        <p className="text-sm text-muted-foreground">
-          {tr("Upload a lesson PDF under Subjects before creating a quiz.")}
-        </p>
+        <EmptyState
+          icon={ListChecks}
+          title="Upload a lesson PDF first"
+          hint="Upload a lesson PDF under Subjects before creating a quiz."
+        />
       )}
-      {hasFiles && quizzes.length === 0 && (
-        <p className="text-sm text-muted-foreground">{tr("No quizzes yet.")}</p>
+      {hasFiles && quizzes.length > 0 && (
+        <SearchField value={q} onChange={setQ} placeholder="Search quizzes" />
+      )}
+      {hasFiles && quizzes.length > 0 && filtered.length === 0 && (
+        <p className="text-sm text-muted-foreground">{tr("No quizzes match your search.")}</p>
       )}
       <ul className="divide-y">
-        {quizzes.map((q) => (
-          <li key={q.id} className="flex items-center gap-3 py-3">
-            <div className="flex-1">
-              <p className="font-medium">{q.title}</p>
+        {filtered.map((qz) => (
+          <li key={qz.id} className="flex flex-wrap items-center gap-3 py-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium">{qz.title}</p>
+                <Badge tone={difficultyTone[qz.difficulty]}>
+                  {tr(quizDifficultyLabel[qz.difficulty])}
+                </Badge>
+              </div>
               <p className="text-xs text-muted-foreground">
-                {subjects.find((s) => s.id === q.subject_id)?.name}
-                {q.material_id ? ` · ${materialLabel(subjects, q.material_id)}` : ""}
+                {subjects.find((s) => s.id === qz.subject_id)?.name}
+                {qz.material_id ? ` · ${materialLabel(subjects, qz.material_id)}` : ""}
                 {" · "}
-                {tr(quizDifficultyLabel[q.difficulty])}
-                {" · "}
-                {tr(q.questions.length === 1 ? "{n} question" : "{n} questions", {
-                  n: q.questions.length,
+                {tr(qz.questions.length === 1 ? "{n} question" : "{n} questions", {
+                  n: qz.questions.length,
                 })}
                 {" · "}
-                {tr("{n} min", { n: q.minutes })}
+                {tr("{n} min", { n: qz.minutes })}
               </p>
             </div>
-            <button className={btnGhost} onClick={() => setEditing(q)}>
+            <button className={btnGhost} onClick={() => setEditing(qz)}>
               <Pencil className="h-4 w-4" />
               {tr("Edit")}
             </button>
@@ -115,9 +153,9 @@ export function QuizzesAdmin() {
               className={btnDanger}
               aria-label={tr("Delete quiz")}
               onClick={async () => {
-                if (confirmDelete(tr('quiz "{title}"', { title: q.title })))
+                if (confirmDelete(tr('quiz "{title}"', { title: qz.title })))
                   await save(
-                    () => supabase.from("quizzes").delete().eq("id", q.id),
+                    () => supabase.from("quizzes").delete().eq("id", qz.id),
                     "Quiz deleted",
                     KEYS,
                   );
@@ -128,7 +166,20 @@ export function QuizzesAdmin() {
           </li>
         ))}
       </ul>
-    </Card>
+      {hasFiles && quizzes.length === 0 && (
+        <EmptyState
+          icon={ListChecks}
+          title="No quizzes yet."
+          hint="Create your first quiz from a lesson PDF — AI can draft the questions."
+          action={
+            <button className={btnGhost} onClick={() => setEditing("new")}>
+              <Plus className="h-4 w-4" />
+              {tr("New quiz")}
+            </button>
+          }
+        />
+      )}
+    </SectionCard>
   );
 }
 
@@ -467,6 +518,7 @@ function QuizEditor({ initial, onDone }: { initial?: AdminQuiz; onDone: () => vo
       )}
       <div className="flex gap-2">
         <button className={btn} disabled={busy} onClick={submit}>
+          {busy && <Spinner />}
           {tr("Save quiz")}
         </button>
         <button className={btnGhost} onClick={onDone}>
