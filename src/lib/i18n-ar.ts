@@ -589,4 +589,10 @@ export const ar: Record<string, string> = {
   "Students reached": "طلاب وصلهم الملف",
   "Opened at least one lesson file": "فتح ملف درس واحدًا على الأقل",
   "Files tracked": "ملفات متتبَّعة",
+
+  // Profile
+  "Last 7 days": "آخر 7 أيام",
+  "Active days": "أيام النشاط",
+  "Progress by subject": "تقدمك في المواد",
+  "No lessons yet — open a subject to start.": "لا توجد دروس بعد — افتح مادة لتبدأ.",
 };
